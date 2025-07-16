@@ -46,7 +46,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       console.log("session: ", session);
       if (session.tokens?.accessToken) {
         const currentUser = await getCurrentUser();
-        setUser(currentUser);
+
+        const idToken = session.tokens.idToken;
+        const email = idToken?.payload?.email as string;
+        const name = idToken?.payload?.name as string;
+
+        setUser({
+          authUser: currentUser,
+          email,
+          name,
+          displayName: email || name || currentUser.username,
+        });
         setIsAuth(true);
       } else {
         throw new Error("No active session");
@@ -77,7 +87,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       const session = await fetchAuthSession();
       if (session.tokens?.accessToken) {
         const currentUser = await getCurrentUser();
-        setUser(currentUser);
+
+        const idToken = session.tokens.idToken;
+        const email = idToken?.payload?.email as string;
+        const name = idToken?.payload?.name as string;
+
+        setUser({
+          authUser: currentUser,
+          email,
+          name,
+          displayName: email || name || currentUser.username,
+        });
         setIsAuth(true);
       } else {
         setIsAuth(false);

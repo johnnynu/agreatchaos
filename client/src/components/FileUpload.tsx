@@ -1,11 +1,14 @@
-import React, { useCallback, useRef, useState } from "react";
-import axios, { AxiosError, AxiosProgressEvent } from "axios";
+"use client";
+
+import type React from "react";
+import { useCallback, useRef, useState } from "react";
+import axios, { type AxiosError, type AxiosProgressEvent } from "axios";
 import { useAuth } from "../hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { FolderOpen, Trash2 } from "lucide-react";
+import { Upload, File, Trash2, Eye, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const MULTIPART_THRESHOLD = 100 * 1024 * 1024; // 100 MB threshold for multipart upload
@@ -104,7 +107,7 @@ const FileUpload: React.FC<{ OnUploadComplete: () => void }> = ({
       }
     );
 
-    const { uploadUrl, fileID } = response.data;
+    const { uploadUrl } = response.data;
 
     // upload file to s3
     await axios.put(uploadUrl, file, {
@@ -200,109 +203,147 @@ const FileUpload: React.FC<{ OnUploadComplete: () => void }> = ({
     navigate("/files");
   };
 
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return (
+      Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
+    );
+  };
+
   return (
-    <Card className="mt-4 border-dashed border-2 border-gray-300">
-      <CardContent className="p-6">
-        {selectedFiles.length === 0 ? (
-          <>
-            <div className="text-center mb-4">
-              <div className="inline-block p-3 rounded-full bg-gray-700 mb-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="text-gray-400"
-                >
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
-                  <line x1="12" y1="18" x2="12" y2="12"></line>
-                  <line x1="9" y1="15" x2="15" y2="15"></line>
-                </svg>
+    <div className="space-y-4">
+      {selectedFiles.length === 0 ? (
+        <Card className="border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-blue-400 dark:hover:border-blue-500 transition-colors bg-gradient-to-br from-blue-50/30 to-slate-50/30 dark:from-blue-950/20 dark:to-slate-900/20">
+          <CardContent className="p-8 text-center">
+            <div className="space-y-4">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-blue-100 to-stone-200 dark:from-blue-900/30 dark:to-stone-800/30 border-2 border-blue-300 dark:border-blue-700">
+                <Upload className="h-8 w-8 text-blue-800 dark:text-blue-400" />
               </div>
-              <p className="text-sm text-gray-400 mb-2">
-                Select or Drag & Drop your files for upload
-              </p>
-              <p className="text-xs text-gray-500">File size limit: 1 TB</p>
-            </div>
-            <div className="flex justify-center space-x-2">
-              <Input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileSelect}
-                className="hidden"
-                id="file-upload"
-                multiple
-              />
-              <Button variant="outline" onClick={handleBrowseClick}>
-                Browse files...
-              </Button>
-            </div>
-          </>
-        ) : (
-          <div className="space-y-4">
-            {selectedFiles.map((file) => (
-              <div key={file.name} className="space-y-2">
-                <div className="flex items-center justify-between bg-gray-800 p-2 rounded">
-                  <div className="flex items-center space-x-2">
-                    <div className="bg-blue-500 p-2 rounded">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">{file.name}</p>
-                      <p className="text-xs text-gray-400">
-                        {(file.size / (1024 * 1024)).toFixed(2)} MB
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {uploadProgress[file.name] === 100 ? (
-                      <FolderOpen
-                        className="cursor-pointer text-gray-400 hover:text-white"
-                        onClick={handleViewFile}
-                      />
-                    ) : (
-                      <Trash2
-                        className="cursor-pointer text-gray-400 hover:text-white"
-                        onClick={() => handleRemoveFile(file.name)}
-                      />
-                    )}
-                  </div>
-                </div>
-                <Progress
-                  value={uploadProgress[file.name] || 0}
-                  className="w-full"
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold text-stone-900 dark:text-stone-100">
+                  Drop your rich files here
+                </h3>
+                <p className="text-stone-600 dark:text-stone-300">
+                  Select or drag & drop your files for upload
+                </p>
+                <p className="text-sm text-stone-500 dark:text-stone-400">
+                  File size limit: <span className="font-medium">1 TB</span> •
+                  All file types supported
+                </p>
+              </div>
+              <div className="pt-2">
+                <Input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  id="file-upload"
+                  multiple
                 />
+                <Button
+                  variant="outline"
+                  onClick={handleBrowseClick}
+                  className="border-blue-300 dark:border-blue-600 text-blue-800 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/20 bg-white dark:bg-slate-900"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Browse Files
+                </Button>
               </div>
-            ))}
-            <Button
-              onClick={handleUpload}
-              disabled={selectedFiles.length === 0}
-            >
-              Start upload your files
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+            <CardContent className="p-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium text-stone-900 dark:text-stone-100">
+                    Selected Files ({selectedFiles.length})
+                  </h4>
+                  <Button
+                    onClick={handleUpload}
+                    disabled={selectedFiles.length === 0}
+                    className="bg-gradient-to-r from-blue-600 to-stone-700 hover:from-blue-700 hover:to-stone-800 text-white shadow-lg"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Start Upload
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  {selectedFiles.map((file) => (
+                    <div key={file.name} className="space-y-2">
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-slate-50 to-blue-50/30 dark:from-slate-800 dark:to-blue-950/20 border border-slate-200 dark:border-slate-700">
+                        <div className="flex items-center space-x-3">
+                          <div className="p-2 bg-gradient-to-br from-blue-100 to-stone-200 dark:from-blue-900/30 dark:to-stone-800/30 rounded-lg border border-blue-300 dark:border-blue-700">
+                            <File className="h-4 w-4 text-blue-800 dark:text-blue-400" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-stone-900 dark:text-stone-100 truncate max-w-xs">
+                              {file.name}
+                            </p>
+                            <p className="text-xs text-stone-600 dark:text-stone-300">
+                              {formatFileSize(file.size)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {uploadProgress[file.name] === 100 ? (
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleViewFile}
+                                className="h-8 w-8 p-0 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-950/20"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveFile(file.name)}
+                              className="h-8 w-8 p-0 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
+                      {uploadProgress[file.name] !== undefined && (
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-stone-600 dark:text-stone-300">
+                              {uploadProgress[file.name] === 100
+                                ? "Upload complete"
+                                : "Uploading..."}
+                            </span>
+                            <span className="text-blue-600 dark:text-blue-400 font-medium">
+                              {uploadProgress[file.name]}%
+                            </span>
+                          </div>
+                          <Progress
+                            value={uploadProgress[file.name] || 0}
+                            className="h-2 bg-slate-200 dark:bg-slate-700"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    </div>
   );
 };
 
